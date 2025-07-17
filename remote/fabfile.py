@@ -138,7 +138,21 @@ def connect(c, user):
     print(f"Connected to {user}@{selected_node} with gpu_stats: {watt}")
     
     target_conn.run('bash', pty=True, hide=False)
-
+@task
+def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
+    conn = establish_base_connection(user)
+    with conn.cd(remote_dir):
+        conn.run('pip install -r requirements.txt', warn=True)
+        conn.run(
+            f'python train.py '
+            f'--epochs {epochs} '
+            f'--batch-size {batch_size} '
+            f'--lr {lr} '
+            f'--device cuda '
+            f'--logroot runs',
+            pty=True
+        )
+    conn.close()
 @task
 def deploy(c, user):
 
