@@ -14,7 +14,7 @@ import getpass
 remote_path = 'work/remote'
 host = "remote.cip.ifi.lmu.de"
 psw ='' #getpass.getpass(prompt='Enter LMU CIP password: ')
-remote_dir = 'work/remote'
+remote_dir = '/home/c/caoq/work/remote'
 repo_url = "git@github.com:cqc-olafa/res-nte.git"
 local_config_path = 'configs/config.yaml'
 remote_config_path = 'work/remote/configs/config.yaml'
@@ -140,27 +140,42 @@ def connect(c, user):
     target_conn.run('bash', pty=True, hide=False)
 @task
 def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
+    from invoke import task
+
+@task
+def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
     conn = establish_base_connection(user)
-    with conn.cd(remote_dir):
-        
-        conn.run(
-            f'python train.py '
-            f'--epochs {epochs} '
-            f'--batch-size {batch_size} '
-            f'--lr {lr} '
-            f'--device cuda '
-            f'--logroot runs',
-            pty=True
-        )
+    
+    with conn.prefix("source ~/miniconda3/etc/profile.d/conda.sh"):
+       
+        with conn.prefix("conda activate mynew"):
+            
+            with conn.cd(remote_dir):
+                conn.run(
+                    f"python train_cv.py "
+                    f"--epochs {epochs} "
+                    f"--batch-size {batch_size} "
+                    f"--lr {lr} "
+                    "--device cuda "
+                    "--logroot runs",
+                    pty=True
+                )
     conn.close()
+
 @task
 def load_data(c, user, setname):
     conn = establish_base_connection(user)
-    with conn.cd(remote_dir):
-        conn.run( 
-            f"python download.py --setname {setname}",
-            pty = True
-            )
+    with conn.prefix("source ~/miniconda3/etc/profile.d/conda.sh"):
+       
+        with conn.prefix("conda activate mynew"):
+            
+            with conn.cd(remote_dir):
+        
+                conn.run(
+                
+                f" python download.py --setname {setname}",
+                pty = True
+                )
     conn.close()
 @task
 def deploy(c, user):
