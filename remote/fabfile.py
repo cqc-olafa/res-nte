@@ -142,7 +142,7 @@ def connect(c, user):
 def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
     conn = establish_base_connection(user)
     with conn.cd(remote_dir):
-        conn.run('pip install -r requirements.txt', warn=True)
+        
         conn.run(
             f'python train.py '
             f'--epochs {epochs} '
@@ -157,7 +157,13 @@ def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
 def load_data(c, user, setname):
     conn = establish_base_connection(user)
     with conn.cd(remote_dir):
-        conn.run('pip install -r requirements.txt', warn=True)
+        conn.run(
+            'python3 -m venv .venv && '
+            'source .venv/bin/activate && '
+            'pip install -r requirements.txt && '
+            '.venv/bin/python download.py --setname {setname}',
+            pty=True
+        )
         conn.run( 
             f"python download.py --setname {setname}",
             pty = True
