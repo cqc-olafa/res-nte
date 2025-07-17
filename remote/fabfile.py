@@ -15,7 +15,7 @@ remote_path = 'work/remote'
 host = "remote.cip.ifi.lmu.de"
 psw ='' #getpass.getpass(prompt='Enter LMU CIP password: ')
 remote_dir = 'work/remote'
-repo_url = 'https://github.com/ndrohrich/CVDL_Practical.git'
+repo_url = "git@github.com:cqc-olafa/res-nte.git"
 local_config_path = 'configs/config.yaml'
 remote_config_path = 'work/remote/configs/config.yaml'
 analysis = True
@@ -141,6 +141,7 @@ def connect(c, user):
 
 @task
 def deploy(c, user):
+
     """
     Deploy the repository to the remote host.
 
@@ -152,6 +153,12 @@ def deploy(c, user):
     
     # Check the remote dir if exists if not create it
     try:
+        base_conn.run('mkdir -p ~/.ssh && touch ~/.ssh/known_hosts')
+
+        # 2) 把 GitHub 的几种 host key 都加到 known_hosts
+        base_conn.run('ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts', hide=True)
+        base_conn.run('ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts', hide=True)
+        base_conn.run('ssh-keyscan -t ecdsa github.com >> ~/.ssh/known_hosts', hide=True)
         if not base_conn.run(f'test -d {remote_dir}', warn=True).ok:
             base_conn.run(f'mkdir -p {remote_dir}')
         

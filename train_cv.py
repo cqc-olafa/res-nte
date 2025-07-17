@@ -7,14 +7,10 @@ from tqdm import tqdm
 import resnet.resres50 as res50
 from torch.utils.tensorboard import SummaryWriter
 import os
+import torchvision.transforms as trans
 import torch.optim.lr_scheduler as lrsch
-lernrat = " 0.035,97warmcos"
-import datetime
-now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-run_na = f"resne50nocut_{lernrat}_{now}"
-log_dir = os.path.join("/runs",run_na)
-os.makedirs(log_dir, exist_ok=True)
-writer = SummaryWriter(log_dir=log_dir)
+
+import test
 ''' resnet'''
 b1 = n.Sequential(n.Conv2d(1,64, kernel_size=3, stride=1, padding=1),n.BatchNorm2d(64),n.ReLU(),#7×7 conv，stride 2 → BatchNorm → ReLU
                                                 n.MaxPool2d(kernel_size=3, stride=2 ,padding=1))
@@ -34,7 +30,7 @@ b4 = n.Sequential(*res50.resnet50(512, 256, 6,first_stride=2))
 b5 = n.Sequential(*res50.resnet50(1024, 512, 3,first_stride=2))
 net50 = n.Sequential(b1, b2, b3, b4, b5,n.AdaptiveAvgPool2d((1,1)), n.Flatten(),n.Linear(2048, 7))
 '''train'''
-def train (net, train_it, test_it, num_epoche, lernrat, device):
+def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
     
     def init_weight (mo):
         if type(mo) == n.Linear or type(mo) == n.Conv2d:
@@ -84,7 +80,45 @@ def train (net, train_it, test_it, num_epoche, lernrat, device):
         scheduler.step()
         print(f"Epoch {epoche}: lr = {scheduler.get_last_lr()[0]:.3e}")
     return train_avloss,train_avacu,test_accu
-
+'''sets setting'''
+class fersets(torch.utils.data.Dataset):
+    def __init__(self,df,transform =None,randomcut = False,cut_padding = 12, reshape =None):
+        super().__init__()
+        self.df = df.reset_index(drop=True)
+        self.pixels = df["pixels"].values
+        self.emotions = df["emotion"].values.astype(np.int64)
+        self.transform = transform
+        self.reshape = reshape
+        self.randomcut = randomcut
+        if randomcut:
+            self.random_crop = trans.RandomCrop(
+                size=(48, 48),
+                padding=cut_padding,
+                pad_if_needed=True
+            )
+        else:
+            self.random_crop = None
+        if reshape is not None:
+            self.resize = trans.Resize((reshape, reshape))
+        else:
+            self.resize = None
+    def __len__(self):
+        return len(self.emotions)
+    def __getitem__(self,idx):
+        
+        arry  = np.fromstring(self.pixels[idx], sep = " ",dtype=np.uint8)
+        img = arry.reshape(48,48)
+        img = torch.from_numpy(img).unsqueeze(0).float()/255#bchw
+        label = int(self.emotions[idx])
+        if self.resize :
+            img = self.resize(img)
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.randomcut is not False:
+            img = self.random_crop(img)
+        if self.resize :
+            img = self.resize(img)
+        return img, label
 
 '''use gpu accu'''
 def eaccuracy_gpu(net, data_it, device = None, num_classes=7):
