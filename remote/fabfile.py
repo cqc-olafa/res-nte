@@ -158,9 +158,8 @@ def load_data(c, user, setname):
     conn = establish_base_connection(user)
     with conn.cd(remote_dir):
         conn.run('pip install -r requirements.txt', warn=True)
-        conn.run(
-            f'python download.py'
-            f'--setname {setname}'
+        conn.run( 
+            f"python download.py --setname {setname}",
             pty = True
             )    
 @task
