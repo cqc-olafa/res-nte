@@ -161,7 +161,8 @@ def load_data(c, user, setname):
         conn.run( 
             f"python download.py --setname {setname}",
             pty = True
-            )    
+            )
+    conn.close()
 @task
 def deploy(c, user):
 
