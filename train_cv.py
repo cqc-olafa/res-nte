@@ -28,7 +28,7 @@ b2 = n.Sequential(*res50.resnet50(64, 64, 3, 1))
 b3 = n.Sequential(*res50.resnet50(256, 128, 4,first_stride=2 ))
 b4 = n.Sequential(*res50.resnet50(512, 256, 6,first_stride=2))
 b5 = n.Sequential(*res50.resnet50(1024, 512, 3,first_stride=2))
-net50 = n.Sequential(b1, b2, b3, b4, b5,n.AdaptiveAvgPool2d((1,1)), n.Flatten(),n.Linear(2048, 7))
+net50 = n.Sequential(b1, b2, b3, b4, b5,n.AdaptiveAvgPool2d((1,1)), n.Flatten(),n.Dropout(0.5),n.Linear(2048, 7))# add
 '''train'''
 def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
     
@@ -36,13 +36,13 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
         if type(mo) == n.Linear or type(mo) == n.Conv2d:
             n.init.xavier_uniform_(mo.weight)
     device = torch.device(device if torch.cuda.is_available() else "cpu")
-    net.apply(init_weight)# all model of net recusive
+    optimiz = torch.optim.SGD(net.parameters(), lr=lernrat, momentum=0.9, weight_decay=1e-4)
     print('train on',device)
     net.to(device)
     optimiz = torch.optim.SGD(net.parameters(), lr=lernrat,  momentum=0.9)
     warmup = lrsch.LinearLR(optimiz, start_factor=0.1, total_iters=5)
-    cosine = lrsch.CosineAnnealingLR(optimiz, T_max=95, eta_min=1e-5)
-    scheduler = lrsch.SequentialLR(optimiz,schedulers=[warmup, cosine], milestones=[5])
+    #cosine = lrsch.CosineAnnealingLR(optimiz, T_max=95, eta_min=1e-5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiz, mode='min', factor=0.1, patience=5)
     loss = n.CrossEntropyLoss(weight=None, ignore_index=-100, reduction='mean')# with sofmax
     train_avloss, train_avacu, test_accu, test_avloss =[], [], [], []
     for epoche in tqdm(range(num_epoche)):
@@ -78,8 +78,12 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
         writer.add_scalar('Accuracy/test', acc, epoche)
         writer.add_scalar('Loss/test', acc_los, epoche)
         writer.flush()
-        scheduler.step()
-        print(f"Epoch {epoche}: lr = {scheduler.get_last_lr()[0]:.3e}")
+        if epoche < 5:
+            warmup.step()
+            print(f"Epoch {epoche}: lr = {scheduler.get_last_lr()[0]:.3e}")
+        else:
+            scheduler.step(acc_los)
+            print(f"Epoch {epoche}: lr = {optimiz.param_groups[0]['lr']:.3e}")
     return train_avloss,train_avacu,test_accu,test_avloss
 '''sets setting'''
 class fersets(torch.utils.data.Dataset):
