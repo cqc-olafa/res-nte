@@ -81,7 +81,7 @@ def main():
 
     
     #train_avloss,train_avacu,test_accu = train_cv.train(train_cv.net, train_it, test_it, 10, 0.035, 'cuda')
-    train_avloss, train_avaccu, test_accu = train_cv.train(
+    train_avloss, train_avaccu, test_accu, test_avloss= train_cv.train(
         net       = train_cv.net,
         train_it  = train_it,
         test_it   = test_it,
@@ -92,9 +92,10 @@ def main():
     )
     writer.close()
 
-    print("train loss:",train_avloss)
-    print("train loss:",train_avaccu)
-    print("train loss:",test_accu)
+    print("train_avloss:",train_avloss)
+    print("train_avaccu:",train_avaccu)
+    print("test_accu:",test_accu)
+    print("test_accu:",test_avloss)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     exam , label = next(iter(test_it))# Visualize a batch and its predictions
@@ -109,7 +110,7 @@ def main():
     plt.figure(figsize=(10,10))
     for pic in range(16):
         plt.subplot(4,4,pic+1)
-        plt.imshow(exam[pic].cpu().numpy().reshape(48,48), cmap='gray')
+        plt.imshow(exam[pic].cpu().numpy().reshape(224,224), cmap='gray')
         plt.title(f'pred:{label_pre[pic]}, label:{label[pic]}')
         plt.axis('off')
     plt.tight_layout()

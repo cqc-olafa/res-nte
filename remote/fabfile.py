@@ -36,7 +36,11 @@ def establish_base_connection(user):
     
     global psw
     if psw=='':
-        psw = getpass.getpass(prompt='Enter LMU CIP password: ')
+        with open('secret.toml', 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith('password'):
+                    psw = line.split('=')[1].strip().strip('"')
     
     base_conn = Connection(host=host, user=user, connect_kwargs={"password": psw})
     try:
@@ -66,6 +70,11 @@ def establish_gpu_connection(user, node):
     target_conn = Connection(host=str(node), user=user, connect_kwargs={"password": psw}, gateway=base_conn)
     try:
         target_conn.open()
+        target_conn.run('echo \'export PATH="/home/c/caoq/miniconda3/bin:$PATH"\' >> ~/.bashrc', hide=True)
+        target_conn.run('source ~/.bashrc', hide=True)
+        
+        # to right work path
+        target_conn.run(f'cd {remote_dir}', hide=True)
     except Exception as e:
         print(f"Connect to {user}@{node} failed: {e}")
         target_conn.close()
@@ -91,7 +100,7 @@ def analyse_gpu(conn):
         return "N/A"
 
 @task
-def connect(c, user):
+def connect(c):
     """
     Connect to a remote node and optionally analyse GPU usage.
 
@@ -100,6 +109,7 @@ def connect(c, user):
         user (str): Username for the remote host.
         analysis (bool): Flag to indicate if GPU analysis is required.
     """
+    user = "caoq"
     base_conn = establish_base_connection(user=user)
     
     # Get available nodes
@@ -138,21 +148,75 @@ def connect(c, user):
     print(f"Connected to {user}@{selected_node} with gpu_stats: {watt}")
     
     target_conn.run('bash', pty=True, hide=False)
-@task
-def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
-    from invoke import task
+
+
 
 @task
-def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
-    conn = establish_base_connection(user)
+def show_gpu(c):
+    user = "caoq"
+    base_conn = establish_base_connection(user=user)
     
-    with conn.prefix("source ~/miniconda3/etc/profile.d/conda.sh"):
-       
-        with conn.prefix("conda activate mynew"):
-            
-            with conn.cd(remote_dir):
-                conn.run(
-                    f"python train_cv.py "
+    # Get available nodes
+    try:
+        nodes = base_conn.run('sinfo', hide=True).stdout
+        available_nodes = []
+        for node in nodes.split('\n'):
+            if 'alloc' in node and 'NvidiaAll' in node:
+                available_nodes = (node.split()[-1].split(','))
+                break
+    except Exception as e:
+        print(f"Failed to retrieve nodes: {e}")
+        base_conn.close()
+        sys.exit(1)
+    
+    if not available_nodes:
+        print("No available nodes found")
+        base_conn.close()
+        sys.exit(1)
+    
+    if analysis:
+        print("  |    node   | gpu_stats |")
+        print("  |-----------|---------- |")
+        for i, node in enumerate(available_nodes):
+            print(f"{i}:| {node + ' ' * (11 - len(node) - len(str(i)))}|{analyse_gpu(Connection(host=str(node), user=user, connect_kwargs={'password': psw}, gateway=base_conn))} |")
+    else:
+        for i, node in enumerate(available_nodes):
+            print(f"{i}: {node}")
+
+@task
+def run_train(c, epochs=10, batch_size=64, lr=0.05):
+    # Let user choose GPU node interactively
+    user = "caoq"
+    base_conn = establish_base_connection(user=user)
+    try:
+        nodes = base_conn.run('sinfo', hide=True).stdout
+        available_nodes = []
+        for node in nodes.split('\n'):
+            if 'alloc' in node and 'NvidiaAll' in node:
+                available_nodes = (node.split()[-1].split(','))
+                break
+    except Exception as e:
+        print(f"Failed to retrieve nodes: {e}")
+        base_conn.close()
+        sys.exit(1)
+    if not available_nodes:
+        print("No available nodes found")
+        base_conn.close()
+        sys.exit(1)
+    print("Available GPU nodes:")
+    for i, node in enumerate(available_nodes):
+        print(f"{i}: {node}")
+    selected_node = input("Select node: ")
+    selected_node = available_nodes[int(selected_node)]
+    base_conn.close()
+
+    # Connect to selected GPU node
+    target_conn = establish_gpu_connection(user, selected_node)
+    with target_conn.prefix("source ~/miniconda3/etc/profile.d/conda.sh"):
+        with target_conn.prefix("conda activate "):
+            with target_conn.cd(remote_dir):
+                target_conn.run(
+                    f"python test.py "
                     f"--epochs {epochs} "
                     f"--batch-size {batch_size} "
                     f"--lr {lr} "
@@ -160,7 +224,7 @@ def run_train(c, user, epochs=10, batch_size=64, lr=0.05):
                     "--logroot runs",
                     pty=True
                 )
-    conn.close()
+    target_conn.close()
 
 @task
 def load_data(c, user, setname):

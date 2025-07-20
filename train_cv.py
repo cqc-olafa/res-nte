@@ -44,7 +44,7 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
     cosine = lrsch.CosineAnnealingLR(optimiz, T_max=95, eta_min=1e-5)
     scheduler = lrsch.SequentialLR(optimiz,schedulers=[warmup, cosine], milestones=[5])
     loss = n.CrossEntropyLoss(weight=None, ignore_index=-100, reduction='mean')# with sofmax
-    train_avloss, train_avacu, test_accu =[], [], []
+    train_avloss, train_avacu, test_accu, test_avloss =[], [], [], []
     for epoche in tqdm(range(num_epoche)):
         metric = res50.Accumulator(3)
         net.train()
@@ -70,6 +70,7 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
         train_avloss.append(avloss)
         train_avacu.append(avaccu)
         test_accu.append(acc)
+        test_avloss.append(acc_los)
         print(acc)
         
         writer.add_scalar('Loss/train', avloss, epoche)
@@ -79,7 +80,7 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
         writer.flush()
         scheduler.step()
         print(f"Epoch {epoche}: lr = {scheduler.get_last_lr()[0]:.3e}")
-    return train_avloss,train_avacu,test_accu
+    return train_avloss,train_avacu,test_accu,test_avloss
 '''sets setting'''
 class fersets(torch.utils.data.Dataset):
     def __init__(self,df,transform =None,randomcut = False,cut_padding = 12, reshape =None):
