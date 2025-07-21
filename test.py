@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as n
 import numpy as np
-import cv2
 import pandas as pd
 from torch.utils.data import TensorDataset,DataLoader
 from sklearn.model_selection import train_test_split
@@ -43,8 +42,10 @@ def main():
     parser.add_argument("--lr",         type=float, default=0.05)
     parser.add_argument("--device",     type=str,   default="cuda")
     parser.add_argument("--logroot",    type=str,   default="runs")
+    parser.add_argument("--net",        type=str,   default="resnet50")
     args = parser.parse_args()
 
+    
     fer2013 = pd.read_csv("resnet/fer2013.csv")
 
     print(fer2013.shape)
@@ -61,14 +62,23 @@ def main():
     test_it = to_loader(val_f, batch_size=64, reshape= 224 ,shuffle=False)
 
     now     = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_na  = f"resnet18-lr{args.lr}-{now}"
+    run_na  = f"-net{args.net}-lr{args.lr}-{now}"
     log_dir = os.path.join(args.logroot, run_na)
     os.makedirs(log_dir, exist_ok=True)
     writer  = SummaryWriter(log_dir=log_dir)
-
+    model_dir = os.path.join("weights", run_na)
+    os.makedirs(model_dir, exist_ok=True)
+    savePath = f"model_{args.net}_lr{args.lr}.pth"
+    SAVE_dir = os.path.join(model_dir, savePath)
     total = 0
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    net = train_cv.net50.to(device)
+    if args.net == "resnet50":
+        net = train_cv.net50
+    elif args.net == "resnet18":
+        net = train_cv.net18
+    else:
+        raise ValueError(f"Unknown network type: {args.net}")
+    net = net.to(device)
     X_batch, Y_batch = next(iter(train_it))
     X = X_batch.to(device)
     Y = Y_batch.to(device)
@@ -82,13 +92,14 @@ def main():
     
     #train_avloss,train_avacu,test_accu = train_cv.train(train_cv.net, train_it, test_it, 10, 0.035, 'cuda')
     train_avloss, train_avaccu, test_accu, test_avloss= train_cv.train(
-        net       = train_cv.net,
+        net       = net,
         train_it  = train_it,
         test_it   = test_it,
         num_epoche= args.epochs,    # 
         lernrat   = args.lr,        # 
         device    = args.device,    # 
-        writer    = writer          # 
+        writer    = writer ,         # 
+        savePath  = savePath  # Save model path
     )
     writer.close()
 

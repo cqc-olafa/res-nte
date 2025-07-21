@@ -18,7 +18,7 @@ b2 = n.Sequential(*res50.res_net(64, 64, 2, havefirst=True))
 b3 = n.Sequential(*res50.res_net(64, 128, 2 ,havefirst=False))
 b4 = n.Sequential(*res50.res_net(128, 256, 2, havefirst=False))
 b5 = n.Sequential(*res50.res_net(256, 512, 2, havefirst=False))
-net = n.Sequential(b1, b2, b3, b4, b5,n.AdaptiveAvgPool2d((1,1)), n.Flatten(),n.Linear(512, 7))#linnear 7 emotion type
+net18 = n.Sequential(b1, b2, b3, b4, b5,n.AdaptiveAvgPool2d((1,1)), n.Flatten(),n.Linear(512, 7))#linnear 7 emotion type
 
 
 '''resnet50'''
@@ -30,7 +30,7 @@ b4 = n.Sequential(*res50.resnet50(512, 256, 6,first_stride=2))
 b5 = n.Sequential(*res50.resnet50(1024, 512, 3,first_stride=2))
 net50 = n.Sequential(b1, b2, b3, b4, b5,n.AdaptiveAvgPool2d((1,1)), n.Flatten(),n.Dropout(0.5),n.Linear(2048, 7))# add
 '''train'''
-def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
+def train (net, train_it, test_it, num_epoche, lernrat, device , writer, savePath):
     
     def init_weight (mo):
         if type(mo) == n.Linear or type(mo) == n.Conv2d:
@@ -45,6 +45,7 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiz, mode='min', factor=0.2, patience=5)
     loss = n.CrossEntropyLoss(weight=None, ignore_index=-100, reduction='mean')# with sofmax
     train_avloss, train_avacu, test_accu, test_avloss =[], [], [], []
+    bestAccuracy = 0
     for epoche in tqdm(range(num_epoche)):
         metric = res50.Accumulator(3)
         net.train()
@@ -72,12 +73,16 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
         test_accu.append(acc)
         test_avloss.append(acc_los)
         print(acc)
-        
         writer.add_scalar('Loss/train', avloss, epoche)
         writer.add_scalar('Accuracy/train', avaccu,epoche)
         writer.add_scalar('Accuracy/test', acc, epoche)
         writer.add_scalar('Loss/test', acc_los, epoche)
         writer.flush()
+        
+        if acc > bestAccuracy:
+                bestAccuracy = acc
+                torch.save(net.state_dict(), savePath)
+                print(f"Model saved to {savePath}")
         if epoche < 5:
             warmup.step()
             print(f"Epoch {epoche}: lr = {scheduler.get_last_lr()[0]:.3e}")

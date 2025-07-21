@@ -75,19 +75,19 @@ class Bottleneck(n.Module):
 
 
 class Accumulator:
-    """在 n 个变量上累加值。acc[i] 索引每个变量的累加结果。"""
+    """Accumulate values in n variables. acc[i] indexes the accumulated result of each variable。"""
     def __init__(self, n):
         self.data = [0.0] * n
 
     def add(self, *args):
-        """把每个值分别累加到 data 对应槽里，参数个数必须等于 n"""
+        """Add each value to the corresponding slot of data"""
         if len(args) != len(self.data):
             raise ValueError(f"Expected {len(self.data)} values, got {len(args)}")
         for i, v in enumerate(args):
             self.data[i] += float(v)
 
     def reset(self):
-        """重置所有累加到 0"""
+        """reset all accumulated values to zero"""
         self.data = [0.0] * len(self.data)
 
     def __getitem__(self, idx):
