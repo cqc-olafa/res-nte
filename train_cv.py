@@ -36,13 +36,13 @@ def train (net, train_it, test_it, num_epoche, lernrat, device ,writer):
         if type(mo) == n.Linear or type(mo) == n.Conv2d:
             n.init.xavier_uniform_(mo.weight)
     device = torch.device(device if torch.cuda.is_available() else "cpu")
-    optimiz = torch.optim.SGD(net.parameters(), lr=lernrat, momentum=0.9, weight_decay=1e-4)
     print('train on',device)
     net.to(device)
-    optimiz = torch.optim.SGD(net.parameters(), lr=lernrat,  momentum=0.9)
+    #optimiz = torch.optim.SGD(net.parameters(), lr=lernrat,  momentum=0.9)
+    optimiz = torch.optim.AdamW(net.parameters(), lr=lernrat, betas=(0.9, 0.95), weight_decay=1e-4)
     warmup = lrsch.LinearLR(optimiz, start_factor=0.1, total_iters=5)
     #cosine = lrsch.CosineAnnealingLR(optimiz, T_max=95, eta_min=1e-5)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiz, mode='min', factor=0.1, patience=5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiz, mode='min', factor=0.2, patience=5)
     loss = n.CrossEntropyLoss(weight=None, ignore_index=-100, reduction='mean')# with sofmax
     train_avloss, train_avacu, test_accu, test_avloss =[], [], [], []
     for epoche in tqdm(range(num_epoche)):

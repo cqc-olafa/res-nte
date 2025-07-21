@@ -24,7 +24,7 @@ train_transform = trans.Compose([
 def augment_trans(tensor_img, turn_angel):
     if random.random()<0.5:
         tensor_img = tf.hflip(tensor_img)
-        if random.random()<0.5:
+        if random.random()<0.6:
             tensor_img = tf.rotate(tensor_img, angle= random.uniform(-turn_angel, turn_angel))
     if random.random()<0.7:
         tensor_img = tf.adjust_contrast(tensor_img, contrast_factor=0.8)
@@ -115,6 +115,7 @@ def main():
         plt.axis('off')
     plt.tight_layout()
     plt.show()
+    plt.savefig( os.path.join(log_dir, f"predictions.png {now}"))
 if __name__ == "__main__":
     main()
 
