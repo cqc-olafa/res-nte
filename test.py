@@ -42,7 +42,7 @@ def main():
     parser.add_argument("--lr",         type=float, default=0.05)
     parser.add_argument("--device",     type=str,   default="cuda")
     parser.add_argument("--logroot",    type=str,   default="runs")
-    parser.add_argument("--net",        type=str,   default="resnet50")
+    parser.add_argument("--net",        type=str,   default="net50")
     args = parser.parse_args()
 
     
@@ -72,9 +72,9 @@ def main():
     SAVE_dir = os.path.join(model_dir, savePath)
     total = 0
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    if args.net == "resnet50":
+    if args.net == "net50":
         net = train_cv.net50
-    elif args.net == "resnet18":
+    elif args.net == "net18":
         net = train_cv.net18
     else:
         raise ValueError(f"Unknown network type: {args.net}")
@@ -130,23 +130,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-'''
-def print_module_shapes(x, module, prefix=""):
-    for name, child in module.named_children():
-        x = child(x)
-        print(f"{prefix}{name:<25} {child.__class__.__name__:<20} {tuple(x.shape)}")
-        # 如果这个 child 又是个容器，就递归进去
-        if isinstance(child, n.Sequential):
-            print_module_shapes(x, child, prefix + "  ")
-
-# 取一个 batch
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-net = train_cv.net.to(device)
-X_batch, Y_batch = next(iter(train_it))
-X = X_batch.to(device)
-Y = Y_batch.to(device)
-print("X_batch.shape:", X_batch.shape)
-print(Y_batch.shape)
-# 调用
-print_module_shapes(X, net)
-'''

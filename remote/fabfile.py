@@ -184,7 +184,7 @@ def show_gpu(c):
             print(f"{i}: {node}")
 
 @task
-def run_train(c, epochs=10, batch_size=64, lr=0.05, net="resnet50"):
+def run_train(c, epochs=10, batch_size=64, lr=0.05, net="net50"):
     # Let user choose GPU node interactively
     user = "caoq"
     base_conn = establish_base_connection(user=user)
@@ -221,8 +221,8 @@ def run_train(c, epochs=10, batch_size=64, lr=0.05, net="resnet50"):
                     f"--batch-size {batch_size} "
                     f"--lr {lr} "
                     "--device cuda "
-                    "--logroot runs"
-                    f"--net {net}",
+                    "--logroot runs "
+                    f"--net {net}",  
                     pty=True
                 )
     target_conn.close()
