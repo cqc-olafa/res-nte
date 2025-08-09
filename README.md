@@ -53,15 +53,13 @@ Note: While AdaptiveAvgPool2d allows variable inputs, inference should use the s
 - Install dependencies:
   - PyTorch + torchvision (CUDA optional)
   - numpy, pandas, scikit-learn, tensorboard, opencv-python, pillow, tqdm
+## Tipps
+- For 4GB GPUs, start with --reshape 48 and --batch-size 8–32.
+- Logs: runs/-net{NET}-lr{LR}-{TIMESTAMP}
+- Weights: weights/-net{NET}-lr{LR}-{TIMESTAMP}/model_{NET}_lr{LR}.pth
+- Best weights are saved when test accuracy improves.
 
 Example (Windows, conda env):
 ````bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 pip install numpy pandas scikit-learn tensorboard opencv-python pillow tqdm
-
-
-##Tipps
-For 4GB GPUs, start with --reshape 48 and --batch-size 8–32.
-Logs: runs/-net{NET}-lr{LR}-{TIMESTAMP}
-Weights: weights/-net{NET}-lr{LR}-{TIMESTAMP}/model_{NET}_lr{LR}.pth
-Best weights are saved when test accuracy improves.
