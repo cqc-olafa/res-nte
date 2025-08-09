@@ -43,23 +43,35 @@ def main():
     parser.add_argument("--device",     type=str,   default="cuda")
     parser.add_argument("--logroot",    type=str,   default="runs")
     parser.add_argument("--net",        type=str,   default="net50")
+    parser.add_argument('--data-path',  type=str,   default="resnet/fer2013.csv", help='Path to FER2013 dataset')
+    parser.add_argument('--reshape',    type=int,   default=224)
     args = parser.parse_args()
-
+    if not os.path.exists(args.data_path):
+        print(f"Error: Data file {args.data_path} not found!")
+        print("Please make sure dataset is in the current directory or specify --data-path")
+        return
     
-    fer2013 = pd.read_csv("resnet/fer2013.csv")
+    print(f"Starting training with parameters:")
+    print(f"  Epochs: {args.epochs}")
+    print(f"  Batch Size: {args.batch_size}")
+    print(f"  Learning Rate: {args.lr}")
+    print(f"  Network: {args.net}")
+    print(f"  Device: {args.device}")
+    print(f"  Data Path: {args.data_path}")
+    fer2013 = pd.read_csv(args.data_path)
 
     print(fer2013.shape)
     #print(fer2013.head())
-
+    picshape =args.reshape
     CLASS_LABELS  = ['Anger','Disgust','Fear','Happy','Neutral','Sadness','Surprise']
     train_data = fer2013.sample(frac=1)#shuffle keep index
     train_data = train_data[train_data["Usage"] == "Training"]
 
     #print (train_data.sample(1).iloc[0])#check
     train_df, val_f = train_test_split(train_data,test_size=0.2,stratify=train_data["emotion"],random_state=42)
-    train_it = to_loader(train_df, batch_size=64, reshape= 224,shuffle=True)
+    train_it = to_loader(train_df, batch_size=64, reshape= picshape,shuffle=True)
 
-    test_it = to_loader(val_f, batch_size=64, reshape= 224 ,shuffle=False)
+    test_it = to_loader(val_f, batch_size=64, reshape= picshape ,shuffle=False)
 
     now     = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_na  = f"-net{args.net}-lr{args.lr}-{now}"
@@ -99,7 +111,7 @@ def main():
         lernrat   = args.lr,        # 
         device    = args.device,    # 
         writer    = writer ,         # 
-        savePath  = savePath  # Save model path
+        savePath  = SAVE_dir  # Save model path
     )
     writer.close()
 
@@ -113,7 +125,7 @@ def main():
     exam = exam.to(device)
     label = label.to(device)
     with torch.no_grad():
-        pre_after = train_cv.net50(exam)# TODO
+        pre_after = net(exam)
     label_pre = torch.argmax(pre_after,dim=1)
     exam_cpu     = exam.cpu()
     label_cpu    = label.cpu()
@@ -121,12 +133,12 @@ def main():
     plt.figure(figsize=(10,10))
     for pic in range(16):
         plt.subplot(4,4,pic+1)
-        plt.imshow(exam[pic].cpu().numpy().reshape(224,224), cmap='gray')
+        plt.imshow(exam[pic].cpu().numpy().reshape(picshape,picshape), cmap='gray')
         plt.title(f'pred:{label_pre[pic]}, label:{label[pic]}')
         plt.axis('off')
     plt.tight_layout()
     plt.show()
-    plt.savefig( os.path.join(log_dir, f"predictions.png {now}"))
+    plt.savefig( os.path.join(log_dir, f"predictions.png {now}.png"))
 if __name__ == "__main__":
     main()
 
